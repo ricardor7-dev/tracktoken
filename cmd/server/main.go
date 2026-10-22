@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -8,8 +9,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"runtime"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -99,15 +102,31 @@ func main() {
 		log.Fatal(err)
 	}
 
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
 	srv := &http.Server{
 		Addr:              cfg.addr,
 		Handler:           handler.New(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
-	log.Printf("listening on %s (workers=%d, supplier-timeout=%s, request-timeout=%s)",
-		cfg.addr, cfg.workers, cfg.supplierTimeout, cfg.requestTimeout)
-	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+	go func() {
+		log.Printf("listening on %s (workers=%d, supplier-timeout=%s, request-timeout=%s)",
+			cfg.addr, cfg.workers, cfg.supplierTimeout, cfg.requestTimeout)
+
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatal(err)
+		}
+	}()
+
+	<-ctx.Done()
+	stop()
+	log.Println("shutting down")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("shutdown: %v", err)
 	}
 }
