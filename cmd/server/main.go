@@ -18,6 +18,7 @@ import (
 	"github.com/joho/godotenv"
 
 	"snsgo/internal/handler"
+	"snsgo/internal/supplier"
 )
 
 type config struct {
@@ -105,9 +106,15 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	defaultClient := http.DefaultClient
+	suppliers := []supplier.Supplier{
+		supplier.NewCoinBase("", defaultClient),
+		supplier.NewBitstamp("", defaultClient),
+	}
+
 	srv := &http.Server{
 		Addr:              cfg.addr,
-		Handler:           handler.New(),
+		Handler:           handler.New(suppliers),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

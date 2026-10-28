@@ -48,7 +48,8 @@ v1 uses four exchanges with public ticker endpoints that need no API key. All qu
 | Bitstamp | `https://www.bitstamp.net/api/v2/ticker/btcusd/` |
 | Gemini   | `https://api.gemini.com/v1/pubticker/btcusd` |
 
-These endpoints can change or be blocked in some countries.
+These endpoints can change or be blocked in some countries. See [docs/exchanges.md](docs/exchanges.md) for
+each exchange's response format, field mapping and error behavior.
 
 ## How the concurrency works
 
